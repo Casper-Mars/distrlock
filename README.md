@@ -9,6 +9,13 @@ This is a toolkit that provides distributed locking capability.
 
 ## Features
 
-- simple lock
-- reentrant lock
-- read write lock
+- [x] Simple lock
+- [x] Reentrant lock
+- [ ] Read write lock
+
+## Storage Backend
+
+- [x] Redis
+- [ ] Etcd
+- [ ] Zookeeper
+
