@@ -2,7 +2,7 @@
 
 This is a toolkit that provides distributed locking capability.
 
-[![Build Status](https://github.com/Casper-Mars/distrlock/workflows/build/badge.svg?branch=main)](https://github.com/Casper-Mars/distrlock/actions)
+[![Build Status](https://github.com/Casper-Mars/distrlock/workflows/Build/badge.svg?branch=main)](https://github.com/Casper-Mars/distrlock/actions)
 
 ## Features
 
