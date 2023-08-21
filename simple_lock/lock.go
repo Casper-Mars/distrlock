@@ -5,13 +5,13 @@ import (
 	"time"
 )
 
-var service Service
+var service SimpleLock
 
-func Register(cService Service) {
+func Register(cService SimpleLock) {
 	service = cService
 }
 
-func GetService() Service {
+func GetService() SimpleLock {
 	return service
 }
 
