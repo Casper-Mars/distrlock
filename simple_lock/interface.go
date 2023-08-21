@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type Service interface {
+type SimpleLock interface {
 	// Lock key with expireTs, if lock failed, return false. If retry is set, it will try to get lock until success or retry times is used up.
 	Lock(ctx context.Context, key string, expireTs time.Duration, opts ...Option) (isLocked bool)
 	// Unlock key

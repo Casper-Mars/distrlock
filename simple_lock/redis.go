@@ -2,8 +2,9 @@ package lock
 
 import (
 	"context"
-	"github.com/redis/go-redis/v9"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type redisLocker struct {
@@ -15,7 +16,7 @@ func RegisterWithRedisImpl(cli redis.Cmdable) {
 	Register(r)
 }
 
-func NewRedisLockService(cli redis.Cmdable) Service {
+func NewRedisLockService(cli redis.Cmdable) SimpleLock {
 	return &redisLocker{
 		cli: cli,
 	}
