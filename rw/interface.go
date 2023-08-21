@@ -1,11 +1,11 @@
-package read_write_lock
+package rw
 
 import (
 	"context"
 	"time"
 )
 
-type RWLock interface {
+type Api interface {
 	// RLock require read-lock
 	RLock(ctx context.Context, key string, expireTs time.Duration, opts ...Option) (isLocked bool, err error)
 	// RUnlock release read-lock

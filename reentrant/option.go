@@ -1,4 +1,4 @@
-package reentrant_lock
+package reentrant
 
 import "time"
 

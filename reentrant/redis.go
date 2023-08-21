@@ -1,4 +1,4 @@
-package reentrant_lock
+package reentrant
 
 import (
 	"context"
@@ -16,7 +16,7 @@ func RegisterWithRedisImpl(cli redis.Cmdable) {
 	Register(r)
 }
 
-func NewRedisLockService(cli redis.Cmdable) ReentrantLock {
+func NewRedisLockService(cli redis.Cmdable) Api {
 	return &redisLocker{
 		cli: cli,
 	}

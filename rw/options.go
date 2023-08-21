@@ -1,4 +1,4 @@
-package read_write_lock
+package rw
 
 type options struct {
 }

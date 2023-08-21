@@ -1,46 +1,46 @@
-package read_write_lock
+package rw
 
 import (
 	"context"
 	"time"
 )
 
-var service RWLock
+var lock Api
 
-func Register(cService RWLock) {
-	service = cService
+func Register(cService Api) {
+	lock = cService
 }
 
-func GetLocker() RWLock {
-	return service
+func GetLocker() Api {
+	return lock
 }
 
 // RLock require read-lock
 func RLock(ctx context.Context, key string, expireTs time.Duration, opts ...Option) (isLocked bool, err error) {
-	return service.RLock(ctx, key, expireTs, opts...)
+	return lock.RLock(ctx, key, expireTs, opts...)
 }
 
 // RUnlock release read-lock
 func RUnlock(ctx context.Context, key string) error {
-	return service.RUnlock(ctx, key)
+	return lock.RUnlock(ctx, key)
 }
 
 // TryRLock try to get read-lock, if failed, return false immediately.
 func TryRLock(ctx context.Context, key string, expireTs time.Duration) (isLocked bool, err error) {
-	return service.TryRLock(ctx, key, expireTs)
+	return lock.TryRLock(ctx, key, expireTs)
 }
 
 // WLock require write lock
 func WLock(ctx context.Context, key string, expireTs time.Duration, opts ...Option) (isLocked bool, err error) {
-	return service.WLock(ctx, key, expireTs, opts...)
+	return lock.WLock(ctx, key, expireTs, opts...)
 }
 
 // WUnlock release write lock
 func WUnlock(ctx context.Context, key string) error {
-	return service.WUnlock(ctx, key)
+	return lock.WUnlock(ctx, key)
 }
 
 // TryWLock try to get write-lock, if failed, return false immediately.
 func TryWLock(ctx context.Context, key string, expireTs time.Duration) (isLocked bool, err error) {
-	return service.TryWLock(ctx, key, expireTs)
+	return lock.TryWLock(ctx, key, expireTs)
 }
