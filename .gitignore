@@ -342,3 +342,7 @@ cscope.in.out
 cscope.po.out
 
 
+/.idea/.gitignore
+/.idea/distrlock.iml
+/.idea/modules.xml
+/.idea/vcs.xml
