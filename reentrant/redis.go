@@ -22,34 +22,28 @@ func NewRedisLockService(cli redis.Cmdable) Api {
 	}
 }
 
-func (r *redisLocker) Lock(ctx context.Context, key string, expireTs time.Duration, opts ...Option) (isLocked bool, ca string, err error) {
-	// 初始化配置
-	o := &lockOptions{
-		waitTime: time.Second,
-	}
-	for _, opt := range opts {
-		opt(o)
-	}
-	// 尝试获取锁
-	success, ca, err := r.TryLock(ctx, key, expireTs)
-	// 获取锁成功，则直接返回
-	if success {
-		return true, ca, nil
-	}
-	// 获取锁失败，并且配置了重试次数，则重试获取锁
-	if o.retry != 0 {
-		for i := 0; i < o.retry; i++ {
-			time.Sleep(o.waitTime)
-			success, ca, err = r.TryLock(ctx, key, expireTs)
-			if success {
+func (r *redisLocker) Lock(ctx context.Context, key string, expireTs time.Duration) (isLocked bool, ca string, err error) {
+	for {
+		select {
+		case <-ctx.Done():
+			return false, "", ctx.Err()
+		default:
+			// try lock
+			isLocked, ca, err = r.TryLock(ctx, key, expireTs)
+			if err != nil {
+				return false, "", err
+			}
+			// if lock success, return
+			if isLocked {
 				return true, ca, nil
 			}
 		}
+		time.Sleep(time.Second * 100)
 	}
-	return false, "", err
 }
 
 func (r *redisLocker) Unlock(ctx context.Context, key string, ca string) error {
+	// TODO: only unlock when ca is matched, otherwise return ErrWrongCa
 	err := r.cli.Del(ctx, key).Err()
 	if err != nil {
 		//log.Errorf("Unlock Del failed key %s err %v", key, err)
