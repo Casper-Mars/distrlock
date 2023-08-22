@@ -12,6 +12,7 @@ This is a toolkit that provides distributed locking capability.
 - [x] Simple lock
 - [x] Reentrant lock
 - [ ] Read write lock
+- [ ] Fair lock
 
 ## Storage Backend
 
