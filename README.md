@@ -9,8 +9,8 @@ This is a toolkit that provides distributed locking capability.
 
 ## Features
 
-- [x] Simple lock
-- [x] Reentrant lock
+- [ ] Simple lock
+- [ ] Reentrant lock
 - [ ] Read write lock
 - [ ] Fair lock
 
