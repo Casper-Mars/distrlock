@@ -11,13 +11,13 @@ func Register(clock Api) {
 	lock = clock
 }
 
-func GetLocker() Api {
+func Get() Api {
 	return lock
 }
 
-// Lock key with expireTs and return ca. If lock failed, return false. If retry is set, it will retry to lock until success or retry times used up
-func Lock(ctx context.Context, key string, expireTs time.Duration, opts ...Option) (isLocked bool, ca string, err error) {
-	return lock.Lock(ctx, key, expireTs, opts...)
+// Lock key with expireTs and return ca. Blocked
+func Lock(ctx context.Context, key string, expireTs time.Duration) (isLocked bool, ca string, err error) {
+	return lock.Lock(ctx, key, expireTs)
 }
 
 // Unlock key with ca. If ca is wrong, return ErrWrongCa
