@@ -49,15 +49,13 @@ func (l *locker) Lock(ctx context.Context) (isLocked bool, err error) {
 }
 
 func (l *locker) Unlock(ctx context.Context) error {
-    if atomic.LoadInt32(&l.holderCnt) < 0 {
-        return nil
+    if atomic.LoadInt32(&l.holderCnt) <= 0 {
+        return ErrNotBelong
     }
 
-    // 锁持有者数量减1
-    atomic.AddInt32(&l.holderCnt, -1)
-
+    // 锁持有者数量-1
     // 当锁最后一个持有者释放锁时，真正释放锁
-    if atomic.LoadInt32(&l.holderCnt) == 0 {
+    if atomic.AddInt32(&l.holderCnt, -1) == 0 {
 
         script := `
        local lock_key = KEYS[1]
@@ -84,24 +82,25 @@ func (l *locker) Unlock(ctx context.Context) error {
 }
 
 func (l *locker) TryLock(ctx context.Context) (isLocked bool, err error) {
-
-    result, err := l.cli.SetNX(ctx, l.key, l.ca, -1).Result()
+    script := `
+		local lock_key = KEYS[1]
+		local lock_val = ARGV[1]
+		local current_val = redis.call('GET', lock_key)
+		if current_val == lock_val then
+			return 1
+		elseif not current_val then
+			redis.call('SET', lock_key, lock_val)
+			return 1
+		else
+			return 0
+		end
+	`
+    result, err := l.cli.Eval(ctx, script, []string{l.key}, l.ca).Result()
     if err != nil {
         return false, err
     }
-    if result == true {
-        // 首次上锁成功
-        atomic.StoreInt32(&l.holderCnt, 1)
-        return true, nil
-    }
 
-    val, err := l.cli.Get(ctx, l.key).Result()
-    if err != nil {
-        return false, err
-    }
-
-    if val == l.ca {
-        // 当前锁的所有者，锁持有者数量+1
+    if result == int64(1) {
         atomic.AddInt32(&l.holderCnt, 1)
         return true, nil
     }
