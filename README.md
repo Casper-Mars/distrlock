@@ -314,3 +314,88 @@ redis-cli -n 15 --scan --pattern 'distrlock:*' | while read -r k; do redis-cli -
 - [x] Redis
 - [ ] Etcd
 - [ ] Zookeeper
+
+## 已知问题
+
+本节只记录**仓库当前真实存在**的问题与历史上的坑，不提供修复时间点（本仓库没有 release 计划）。三条命令全绿只说明能编译、`go vet` 没报、现有测试没失败，**不能说明锁语义正确**。
+
+### 1. 历史：`core/fair` 引用 v8，`go.mod` 只声明 v9（已修复）
+
+修复前（`bff79da` 及更早）的仓库状态：
+
+- `core/fair/redis.go` 导入 `github.com/go-redis/redis/v8`；
+- `core/fair/fair_test.go` 导入 `github.com/redis/go-redis/v8`（注意前缀不同，这是另一个错误路径）；
+- `go.mod` 只 `require github.com/redis/go-redis/v9 v9.1.0`。
+
+后果：`go build ./...`、`go vet ./...` 失败，`go test ./...` 无法编译 `core/fair`。
+
+**历史复现**（需要联网拉模块；只对修复前的提交有效）：
+
+```bash
+git checkout bff79da          # 修复前最后一个提交
+GOFLAGS=-mod=mod go vet ./... # exit=1
+```
+
+关键输出（省略了前面的 `finding module` 行）：
+
+```text
+go: github.com/Casper-Mars/distrlock/core/fair tested by
+	github.com/Casper-Mars/distrlock/core/fair.test imports
+	github.com/redis/go-redis/v8: github.com/redis/go-redis/v8@v8.11.5: parsing go.mod:
+	module declares its path as: github.com/go-redis/redis/v8
+	        but was required as: github.com/redis/go-redis/v8
+```
+
+不加 `-mod=mod` 直接 `go vet ./...` 时，Go 1.26.1 的报错是 `no required module provides package github.com/go-redis/redis/v8`——根因相同（`go.mod` 没有 v8），只是新版 Go 不再自动补依赖。
+
+**修复**：commit `05ecf09`（`fix(fair): 迁到 go-redis/v9 解除构建阻塞`）把 `core/fair/redis.go` 与 `core/fair/fair_test.go` 的 import 统一为 `github.com/redis/go-redis/v9`；`go.mod` 未改动，仓库只保留 v9 一个版本。
+
+**修复后**（当前 `main`；Go 1.26.1，本地 Redis 6379 运行中）：
+
+```bash
+go build ./... # exit 0
+go vet ./...   # exit 0
+go test ./...  # exit 0
+```
+
+`go test ./...` 输出：
+
+```text
+?   	github.com/Casper-Mars/distrlock/core	[no test files]
+ok  	github.com/Casper-Mars/distrlock/core/fair	4.879s
+?   	github.com/Casper-Mars/distrlock/core/reentrant	[no test files]
+?   	github.com/Casper-Mars/distrlock/core/rw	[no test files]
+?   	github.com/Casper-Mars/distrlock/core/simple	[no test files]
+?   	github.com/Casper-Mars/distrlock/examples/fair	[no test files]
+?   	github.com/Casper-Mars/distrlock/examples/reentrant	[no test files]
+?   	github.com/Casper-Mars/distrlock/examples/simple	[no test files]
+```
+
+**复现口径**：修复后该报错在 `main` 上不再出现，所以「复现」只对修复前的提交 `bff79da` 成立；当前 `main` 能验证的是三条命令均 `exit 0`。不要把「已修复」理解成「问题从未存在」。
+
+### 2. `fair` 的测试形同虚设
+
+`core/fair/fair_test.go` 只有一个测试 `Test_FairLock`：起 4 个 goroutine 调 `DistributedMutex.Lock`，**没有任何断言**——出错只 `fmt.Println(err)` 后 `return`，没有 `t.Error` / `t.Fatal`，也不校验谁先拿到锁。测试还硬编码连接 `localhost:6379`。
+
+后果：`go test ./...` 通过只说明测试进程跑完没崩，**不代表 fair 的公平性/互斥性被验证**。把连接地址换成不存在的端口，测试同样 `PASS`（连接错误被打印后 `return`）——这是「无断言」的直接证据，不是对锁行为的验证。
+
+### 3. CI 在 2026-10-31 之前从未运行
+
+`.github/workflows/go.yml`（workflow 名 `Build`）确实存在，步骤只有 `go build -v ./...` 与 `go test -v ./...`，**没有 Redis service**。
+
+仓库 2023-08-21 初始化，但该 workflow 在 2026-10-31 之前没有任何运行记录：审计时 GitHub API `workflow_runs.total_count = 0`。2026-10-31 的文档 PR 合并后才产生第一批运行；截至本节写作共 4 次，全部 success：
+
+| 时间（UTC） | 触发 | 分支 | 结论 |
+|---|---|---|---|
+| 2026-10-31T05:36:10Z | pull_request | `feat/distrlock-s1-s4` | success |
+| 2026-10-31T05:38:21Z | push | `main` | success |
+| 2026-10-31T05:47:48Z | pull_request | `docs/T0005-failure-modes` | success |
+| 2026-10-31T05:54:17Z | push | `main` | success |
+
+Build badge 现在只会反映这 4 次（及之后）的运行。这 4 次 success 的含义仅限于「能编译、`go test` 没失败」：由于第 2 条（测试无断言）与 CI 没有 Redis service，这个绿色徽章**不能作为锁语义可用的证据**。
+
+### 4. 两个未实现入口：调用即 panic
+
+`rw.NewLocker` 与 `fair.NewLocker` 返回的 `core.Locker` 都能通过编译，但 `Lock` / `Unlock` / `TryLock` 任一方法都是 `panic("implement me")`。入口与源码行号见上方「功能矩阵」，这里不重复展开——选型时以矩阵为准，不要只看构造能否编译通过。
+
+以上问题本期只做披露：不修 CI、不补测试断言，也不承诺修复时间点。
