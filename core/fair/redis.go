@@ -9,7 +9,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	"github.com/google/uuid"
 )
 
@@ -68,7 +68,7 @@ func (m *DistributedMutex) Lock(ctx context.Context, mems ...string) (mem string
 	score := time.Now().UnixMicro()
 
 	// 尝试获取锁，并排队等待
-	result, err := m.client.ZAddNX(ctx, m.lockKey, &redis.Z{
+	result, err := m.client.ZAddNX(ctx, m.lockKey, redis.Z{
 		Score:  float64(score),
 		Member: mem,
 	}).Result()
