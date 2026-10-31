@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/redis/go-redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
 func Test_FairLock(t *testing.T) {
